@@ -22,8 +22,10 @@ are available.
 ## Running
 
 To reproduce results from the article, “Państwo.*” files included in data
-available on the website of Państwowy Rejestr Granic [http://codgik.gov.pl/index.php/darmowe-dane/prg.html]
+available on the website of Państwowy Rejestr Granic
+[http://www.gugik.gov.pl/pzgik/dane-bez-oplat/dane-z-panstwowego-rejestru-granic-i-powierzchni-jednostek-podzialow-terytorialnych-kraju-prg]
 have to be downloaded and placed in “data” subdirectory.
+Various versions of these data are also available from [http://srodekpolski.pl].
 
 ```
 USAGE: ./srodek N
@@ -34,6 +36,8 @@ in one dimension. Total number of grid points (labeled *M* in the article)
 will be equal to *M* = *N*<sup>2</sup>.
 
 ### Example
+
+(for the original data set used for publication)
 
 ```
 ./srodek 10
