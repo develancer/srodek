@@ -37,7 +37,7 @@ will be equal to *M* = *N*<sup>2</sup>.
 
 ```
 ./srodek 10
-    10  312679.529 52.1143376218 19.4236714921 -4083.578
+    10  312679.529 52.1143376218 19.4236714921 -4083.578 52°06′51.62″ 19°25′25.22″
 ```
 
 Subsequent values denote:
@@ -47,3 +47,5 @@ Subsequent values denote:
 * estimated latitude of the centre (°)
 * estimated longitude of the centre (°)
 * estimated altitude of the centre relative to the ellipsoid of reference (m)
+* latitude (repeated) in degrees-minutes-seconds
+* longitude (repeated) in degrees-minutes-seconds

@@ -11,6 +11,7 @@
 
 #include "shapefil.h"
 
+#include <GeographicLib/DMS.hpp>
 #include <GeographicLib/Geocentric.hpp>
 #include <GeographicLib/Geodesic.hpp>
 #include <GeographicLib/Gnomonic.hpp>
@@ -18,6 +19,7 @@
 #include <GeographicLib/TransverseMercator.hpp>
 #include <GeographicLib/AlbersEqualArea.hpp>
 
+using GeographicLib::DMS;
 using GeographicLib::Geocentric;
 using GeographicLib::Geodesic;
 using GeographicLib::PolygonArea;
@@ -225,7 +227,11 @@ void compute(const Polygon& polygon, const Geocentric& geocentric, const Project
 		Z = Z0 + Z / area;
 		double lat, lon, h;
 		geocentric.Reverse(X, Y, Z, lat, lon, h);
-		printf("  %10.3f %12.10f %12.10f %.3f", 1.0e-6*area, lat, lon, h);
+		double latD, latM, latS, lonD, lonM, lonS;
+		DMS::Encode(lat, latD, latM, latS);
+		DMS::Encode(lon, lonD, lonM, lonS);
+		printf("  %10.3f %12.10f %12.10f %.3f %.0f°%02.0f′%05.2f″ %.0f°%02.0f′%05.2f″",
+			1.0e-6*area, lat, lon, h, latD, latM, latS, lonD, lonM, lonS);
 		fflush(stdout);
 	}
 }
