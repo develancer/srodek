@@ -74,20 +74,27 @@ public:
 };
 
 // routine to read vertices from Shapefile to boost-style polygon
-Polygon readShapefile(const char* filepath) {
+std::list<Polygon> readShapefile(const char* filepath) {
 	ShapeFileHandle handle(filepath);
 
 	ShapeObjectHandle shape = handle.readObject(0);
-	if (!shape || shape->nSHPType != SHPT_POLYGON || shape->nParts != 1) {
+	if (!shape || shape->nSHPType != SHPT_POLYGON) {
 		throw std::runtime_error("invalid file contents");
 	}
 
-	Polygon polygon;
+	std::list<Polygon> polygons;
 	const double *x = shape->padfX, *y = shape->padfY;
-	for (int v=0; v<shape->nVertices; ++v) {
-		boost::geometry::append(polygon, Point(x[v]-MERCATOR_FALSE_EASTING, y[v]-MERCATOR_FALSE_NORTHING));
+	for (int part=0; part<shape->nParts; ++part) {
+		int vStart = (shape->nParts > 1) ? shape->panPartStart[part] : 0;
+		int vEnd = (shape->nParts > 1 && part+1<shape->nParts) ? shape->panPartStart[part+1] : shape->nVertices;
+
+		Polygon polygon;
+		for (int v=vStart; v<vEnd; ++v) {
+			boost::geometry::append(polygon, Point(x[v]-MERCATOR_FALSE_EASTING, y[v]-MERCATOR_FALSE_NORTHING));
+		}
+		polygons.push_back(std::move(polygon));
 	}
-	return polygon;
+	return polygons;
 }
 
 // wrapper for projection classes
@@ -162,13 +169,17 @@ Polygon translate(const Projection& srcProjection, const Projection& dstProjecti
 
  ///////////////////////////////////////////////////////////////////////
 // main routines for computation of the centre ////////////////////////
-void compute(const Polygon& polygon, const Geocentric& geocentric, const Projection& projection, int N) {
-	Rectangle bounds;
-	boost::geometry::envelope(polygon, bounds);
-	const double xMin = bounds.min_corner().get<0>();
-	const double xMax = bounds.max_corner().get<0>();
-	const double yMin = bounds.min_corner().get<1>();
-	const double yMax = bounds.max_corner().get<1>();
+void compute(const std::list<Polygon>& polygons, const Geocentric& geocentric, const Projection& projection, int N) {
+	double xMin = INFINITY, xMax = -INFINITY;
+	double yMin = INFINITY, yMax = -INFINITY;
+	for (const Polygon& polygon : polygons) {
+		Rectangle bounds;
+		boost::geometry::envelope(polygon, bounds);
+		xMin = std::min(xMin, bounds.min_corner().get<0>());
+		xMax = std::max(xMax, bounds.max_corner().get<0>());
+		yMin = std::min(yMin, bounds.min_corner().get<1>());
+		yMax = std::max(yMax, bounds.max_corner().get<1>());
+	}
 
 	double x[N+1], y[N+1];
 	for (int i=0; i<=N; ++i) {
@@ -195,22 +206,24 @@ void compute(const Polygon& polygon, const Geocentric& geocentric, const Project
 			boost::geometry::append(cell, Point(x[ix+1], y[iy]));
 			boost::geometry::append(cell, Point(x[ix], y[iy]));
 
-			intersection.clear();
-			boost::geometry::intersection(polygon, cell, intersection);
-			for (const Polygon& part : intersection) {
-				Point centroid(0, 0);
-				double lat, lon, X, Y, Z;
-				boost::geometry::centroid(part, centroid);
-				projection.Reverse(centroid.x(), centroid.y(), lat, lon);
-				geocentric.Forward(lat, lon, 0.0, X, Y, Z);
+			for (const Polygon& polygon : polygons) {
+				intersection.clear();
+				boost::geometry::intersection(polygon, cell, intersection);
+				for (const Polygon& part : intersection) {
+					Point centroid(0, 0);
+					double lat, lon, X, Y, Z;
+					boost::geometry::centroid(part, centroid);
+					projection.Reverse(centroid.x(), centroid.y(), lat, lon);
+					geocentric.Forward(lat, lon, 0.0, X, Y, Z);
 
-				double area = boost::geometry::area(part);
-				XNode += (X - X0) * area;
-				YNode += (Y - Y0) * area;
-				ZNode += (Z - Z0) * area;
+					double area = boost::geometry::area(part);
+					XNode += (X - X0) * area;
+					YNode += (Y - Y0) * area;
+					ZNode += (Z - Z0) * area;
 
-				// summation of the area
-				areaNode += area;
+					// summation of the area
+					areaNode += area;
+				}
 			}
 		}
 	}
@@ -261,9 +274,12 @@ int main(int argc, char** argv) {
 			fflush(stdout);
 		}
 
-		Polygon polygonInTransMerc = readShapefile("data/Państwo.shp");
-		Polygon polygonInEqualArea = translate(transMerc, equalArea, polygonInTransMerc);
-		compute(polygonInEqualArea, geocentric, equalArea, N);
+		std::list<Polygon> polygonsInTransMerc = readShapefile("data/Państwo.shp");
+		std::list<Polygon> polygonsInEqualArea;
+		for (const Polygon& polygon : polygonsInTransMerc) {
+			polygonsInEqualArea.push_back(translate(transMerc, equalArea, polygon));
+		}
+		compute(polygonsInEqualArea, geocentric, equalArea, N);
 		if (!rankMPI) {
 			putchar('\n');
 		}
