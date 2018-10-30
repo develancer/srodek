@@ -24,23 +24,27 @@ are available.
 To reproduce results from the article, “Państwo.*” files included in data
 available on the website of Państwowy Rejestr Granic
 [http://www.gugik.gov.pl/pzgik/dane-bez-oplat/dane-z-panstwowego-rejestru-granic-i-powierzchni-jednostek-podzialow-terytorialnych-kraju-prg]
-have to be downloaded and placed in “data” subdirectory.
+have to be downloaded and extracted to a suitable directory.
 Various versions of these data are also available from [http://srodekpolski.pl].
 
 ```
-USAGE: ./srodek N
+USAGE: ./srodek N path_to_shapefile [ object_index ]
 ```
 
-Program needs one command-line argument *N*, which is the number of grid cells
-in one dimension. Total number of grid points (labeled *M* in the article)
-will be equal to *M* = *N*<sup>2</sup>.
+Program needs two command-line arguments: *N*, which is the number of grid cells
+in one dimension, and a path to the shapefile. Total number of grid points
+(labeled *M* in the article) will be equal to *M* = *N*<sup>2</sup>.
+
+Optionally, if multi-object shapefile is given, additional third parameter
+should denote an index of the object in the shapefile. If the third parameter
+is not given, the first object in the file will be read.
 
 ### Example
 
 (for the original data set used for publication)
 
 ```
-./srodek 10
+./srodek 10 Państwo
     10  312679.529 52.1143376218 19.4236714921 -4083.578 52°06′51.62″ 19°25′25.22″
 ```
 
