@@ -39,6 +39,11 @@ Optionally, if multi-object shapefile is given, additional third parameter
 should denote an index of the object in the shapefile. If the third parameter
 is not given, the first object in the file will be read.
 
+**IMPORTANT**: the current version of the program works only with the most
+recent dataset, consisting of simple latitude and longitude values.
+To work with older datasets represented in Transverse Mercator projection,
+use the version from *transverse-mercator* branch instead.
+
 ### Example
 
 (for the original data set used for publication)
