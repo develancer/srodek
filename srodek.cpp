@@ -16,7 +16,6 @@
 #include <GeographicLib/Geodesic.hpp>
 #include <GeographicLib/Gnomonic.hpp>
 #include <GeographicLib/PolygonArea.hpp>
-#include <GeographicLib/TransverseMercator.hpp>
 #include <GeographicLib/AlbersEqualArea.hpp>
 
 using GeographicLib::DMS;
@@ -40,9 +39,6 @@ typedef std::unique_ptr<SHPObject, decltype(&SHPDestroyObject)> ShapeObjectHandl
 const double GRS80_A = 6378137.0;
 const double GRS80_F = 1.0/298.257222101;
 
-const double MERCATOR_FALSE_EASTING = 500000.0;
-const double MERCATOR_FALSE_NORTHING = -5300000.0;
-const double MERCATOR_SCALE_FACTOR = 0.9993;
 const double CENTRAL_MERIDIAN = 19.0;
 const double CENTRAL_PARALLEL = 52.0;
 
@@ -94,7 +90,7 @@ Shape readShapefile(const char* filepath, int index) {
 
 		Ring ring;
 		for (int v=vStart; v<vEnd; ++v) {
-			boost::geometry::append(ring, Point(x[v]-MERCATOR_FALSE_EASTING, y[v]-MERCATOR_FALSE_NORTHING));
+			boost::geometry::append(ring, Point(x[v], y[v]));
 		}
 		if (boost::geometry::area(ring) < 0) {
 			innerRings.push_back(ring);
@@ -135,18 +131,16 @@ public:
 	}
 };
 
-// wrapper for transverse mercator projection
-class TransMercProjection : public Projection {
-	GeographicLib::TransverseMercator internal;
+// wrapper for a simple no-op latitude/longitude projection
+class TrivialProjection : public Projection {
 public:
-	TransMercProjection(const Geodesic& geodesic)
-	: internal(geodesic.MajorRadius(), geodesic.Flattening(), MERCATOR_SCALE_FACTOR) { }
-
 	void Forward(double lat, double lon, double& x, double& y) const {
-		internal.Forward(CENTRAL_MERIDIAN, lat, lon, x, y);
+		x = lon;
+		y = lat;
 	}
 	void Reverse(double x, double y, double& lat, double& lon) const {
-		internal.Reverse(CENTRAL_MERIDIAN, x, y, lat, lon);
+		lon = x;
+		lat = y;
 	}
 };
 
@@ -300,15 +294,16 @@ int main(int argc, char** argv) {
 
 		Geodesic geodesic(GRS80_A, GRS80_F);
 		Geocentric geocentric(GRS80_A, GRS80_F);
-		TransMercProjection transMerc(geodesic);
+		TrivialProjection trivial;
 		EqualAreaProjection equalArea(geodesic);
+
 		if (!rankMPI) {
 			printf("%6d ", N);
 			fflush(stdout);
 		}
 
 		Shape shape = readShapefile(path, index);
-		translateShape(transMerc, equalArea, shape);
+		translateShape(trivial, equalArea, shape);
 		compute(shape, geocentric, equalArea, N);
 		if (!rankMPI) {
 			putchar('\n');
